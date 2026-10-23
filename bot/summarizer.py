@@ -60,21 +60,30 @@ def _apply(chunk: list[Item], results: list) -> None:
             it.label = label
 
 
-def annotate(items: list[Item], model: str, batch_size: int = 10, log=print, client=None) -> None:
-    """items 를 제자리에서 갱신한다(summary / relevant / label). 실패해도 예외를 던지지 않는다."""
+def annotate(
+    items: list[Item], model: str, batch_size: int = 10, log=print, client=None
+) -> str | None:
+    """items 를 제자리에서 갱신한다(summary / relevant / label).
+
+    예외는 던지지 않는다. 실패하면 사람이 읽을 수 있는 원인 문장을 돌려주고, 성공이면 None.
+    """
     if not items:
-        return
+        return None
+    error: str | None = None
     if client is None:
-        if not os.getenv("ANTHROPIC_API_KEY"):
-            log("[summary] ANTHROPIC_API_KEY 없음 — 요약 건너뜀")
-            return
+        key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()  # 붙여넣기로 생긴 공백·줄바꿈 제거
+        if not key:
+            msg = "ANTHROPIC_API_KEY가 비어 있거나 GitHub Secrets에 등록되지 않았어요"
+            log(f"[summary-fail] {msg}")
+            return msg
         try:
             import anthropic
 
-            client = anthropic.Anthropic(timeout=60.0, max_retries=2)
+            client = anthropic.Anthropic(api_key=key, timeout=60.0, max_retries=2)
         except Exception as exc:
-            log(f"[summary-fail] 클라이언트 생성 실패: {type(exc).__name__}")
-            return
+            msg = f"클라이언트를 만들지 못했어요 ({type(exc).__name__})"
+            log(f"[summary-fail] {msg}")
+            return msg
 
     for start in range(0, len(items), batch_size):
         chunk = items[start : start + batch_size]
@@ -103,6 +112,12 @@ def annotate(items: list[Item], model: str, batch_size: int = 10, log=print, cli
             text = "".join(
                 getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text"
             )
-            _apply(chunk, _parse(text))
+            results = _parse(text)
+            if not results:
+                error = error or "Claude 응답에서 요약 JSON을 찾지 못했어요"
+                log(f"[summary-fail] {error}")
+            _apply(chunk, results)
         except Exception as exc:  # 요약 실패가 알림을 막으면 안 된다
+            error = error or f"{type(exc).__name__}: {str(exc)[:200]}"
             log(f"[summary-fail] {type(exc).__name__}: {str(exc)[:200]}")
+    return error

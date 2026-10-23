@@ -8,9 +8,11 @@
 from __future__ import annotations
 
 import argparse
+import html
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import yaml
 
@@ -38,17 +40,27 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
     new_items: list[Item] = []
     ok = failed = 0
     seen_in_run: set[str] = set()
-    first_run_preview = max(0, int(cfg.get("first_run_preview", 0)))
-    for src in cfg["sources"]:
+    default_preview = max(0, int(cfg.get("first_run_preview", 0)))
+    preview_budget = max(0, int(cfg.get("first_run_preview_max", 10)))  # 미리보기 전체 상한
+
+    def run_fetch(src: dict):
         fetch = FETCHERS.get(src["type"])
         if fetch is None:
-            log(f"[skip] {src['id']}: unknown type {src['type']}")
-            continue
+            return src, None, f"unknown type {src['type']}"
         try:
-            fetched = fetch(src)
+            return src, fetch(src), None
         except Exception as exc:  # 한 소스의 실패가 전체를 막지 않게
+            return src, None, f"{type(exc).__name__}: {exc}"
+
+    # 소스가 많아도 느린 사이트 하나에 발목 잡히지 않도록 병렬로 가져오고, 처리는 순서대로 한다.
+    workers = max(1, int(cfg.get("fetch_workers", 8)))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(run_fetch, cfg["sources"]))
+
+    for src, fetched, err in results:
+        if err is not None:
             failed += 1
-            log(f"[fail] {src['id']}: {type(exc).__name__}: {exc}")
+            log(f"[fail] {src['id']}: {err}")
             continue
         ok += 1
         for it in fetched:
@@ -57,8 +69,11 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
             it.must_send = not src.get("relevance_filter", True)
         if src["id"] not in store.seeded:
             # 처음 붙인 소스: 최신 N건은 미리보기로 보내고, 나머지는 기존 글로만 기록
-            preview = fetched[:first_run_preview]
-            for it in fetched[first_run_preview:]:
+            want = max(0, int(src.get("first_run_preview", default_preview)))
+            n = min(want, preview_budget)
+            preview_budget -= n
+            preview = fetched[:n]
+            for it in fetched[n:]:
                 store.add(it.id)
             store.seeded.add(src["id"])
             seen_in_run.update(i.id for i in preview)
@@ -79,20 +94,26 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
     return new_items, ok, failed
 
 
-def prepare(items: list[Item], cfg: dict, store: Store, log=print) -> list[Item]:
-    """긴급 우선 정렬 → (켜져 있으면) Claude 요약·관련도 판단 → 관련 없는 글은 기록만 하고 제외."""
+def prepare(
+    items: list[Item], cfg: dict, store: Store, log=print, notes: list[str] | None = None
+) -> list[Item]:
+    """긴급 우선 정렬 → (켜져 있으면) Claude 요약·관련도 판단 → 관련 없는 글은 기록만 하고 제외.
+
+    요약이 실패하면 원인 문장을 notes 에 넣는다(글은 요약 없이 그대로 전송된다)."""
     items = sorted(items, key=lambda i: not i.urgent)
     scfg = cfg.get("summarizer") or {}
     if not scfg.get("enabled"):
         return items
     # 한 번에 요약할 양을 제한. 넘친 항목은 기록하지 않으므로 다음 실행에서 다시 잡힌다.
     items = items[: int(scfg.get("max_summarize", 40))]
-    annotate(
+    err = annotate(
         items,
         model=scfg.get("model", "claude-haiku-5-5"),
         batch_size=int(scfg.get("batch_size", 10)),
         log=log,
     )
+    if err and notes is not None:
+        notes.append(err)
     kept = []
     for it in items:
         if it.relevant is False and not it.must_send:
@@ -122,6 +143,24 @@ def deliver(items, send, store: Store, limit: int, log=print) -> int:
     return sent
 
 
+SUMMARY_WARN_INTERVAL = 6 * 3600  # 같은 경고는 6시간에 한 번만
+
+
+def warn_summary(send, store: Store, notes: list[str], log=print) -> None:
+    """요약이 실패했으면 이유를 텔레그램으로 한 번 알린다(30분마다 반복되지 않게 제한)."""
+    if not notes:
+        return
+    log(f"[summary-warn] {notes[0]}")
+    now = int(time.time())
+    if now - int(store.meta.get("summary_warn_at", 0)) < SUMMARY_WARN_INTERVAL:
+        return
+    try:
+        send(f"⚠️ 요약 기능을 쓰지 못했어요: {html.escape(notes[0])}\n알림은 요약 없이 그대로 전송됩니다.")
+        store.meta["summary_warn_at"] = now
+    except TelegramError as exc:
+        log(f"[send-fail] 경고 전송 실패: {exc}")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -137,6 +176,22 @@ def main(argv: list[str] | None = None) -> int:
             print("TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 가 필요합니다.")
             return 2
         tg.send("✅ news-bot 테스트 메시지입니다. 전송이 정상 동작해요.")
+        scfg = load_config().get("summarizer") or {}
+        if scfg.get("enabled"):
+            # 요약 연결도 한 건으로 점검해서 결과를 텔레그램으로 알려 준다
+            probe = Item(
+                id="probe",
+                title="curl 8.23.0",
+                url="https://example.com",
+                source="test",
+                category="security",
+                body="curl 8.23.0 fixes an out-of-bounds read in HTTP/2 handling and several minor bugs.",
+            )
+            err = annotate([probe], model=scfg.get("model", "claude-haiku-5-5"))
+            if probe.summary and not err:
+                tg.send(f"✅ 요약 연결 정상: {html.escape(probe.summary)}")
+            else:
+                tg.send(f"⚠️ 요약 기능을 쓰지 못했어요: {html.escape(err or '응답이 비어 있음')}")
         print("테스트 메시지를 보냈습니다.")
         return 0
 
@@ -148,16 +203,20 @@ def main(argv: list[str] | None = None) -> int:
     store = Store("state/seen.json")
     items, ok, failed = collect(cfg, store)
     mark_urgent(items, cfg.get("urgent_keywords", []))
-    items = prepare(items, cfg, store)
+    notes: list[str] = []
+    items = prepare(items, cfg, store, notes=notes)
 
     if args.dry_run:
         for it in items:
             line = ("🚨 " if it.urgent else "• ") + f"[{it.label or it.category}] {it.title}  {it.url}"
             print(line + (f"\n    └ {it.summary}" if it.summary else ""))
+        for note in notes:
+            print(f"⚠ 요약 실패: {note}")
         print(f"dry-run: 새 글 {len(items)}건 (전송·저장 안 함)")
         return 0
 
     sent = deliver(items, tg.send, store, cfg.get("max_items_per_run", 20))
+    warn_summary(tg.send, store, notes)
     store.save()
     print(f"완료: 소스 성공 {ok} / 실패 {failed}, 전송 {sent}건")
     return 1 if ok == 0 and failed > 0 else 0

@@ -12,7 +12,7 @@ import feedparser
 import requests
 
 UA = "news-bot/1.0"
-TIMEOUT = 20
+TIMEOUT = 15
 
 
 @dataclass
@@ -177,6 +177,7 @@ def fetch_rss(cfg: dict) -> list[Item]:
     feed = feedparser.parse(resp.content)
     include = [k.lower() for k in cfg.get("keywords", [])]
     exclude = [k.lower() for k in cfg.get("exclude_keywords", [])]
+    exclude_re = [re.compile(p, re.IGNORECASE) for p in cfg.get("exclude_regex", [])]
     items = []
     for e in feed.entries[: cfg.get("limit", 20)]:
         title = (e.get("title") or "").strip()
@@ -188,12 +189,17 @@ def fetch_rss(cfg: dict) -> list[Item]:
             continue
         if exclude and any(k in title.lower() for k in exclude):
             continue
+        if exclude_re and any(r.search(title) for r in exclude_re):
+            continue
         raw = e.get("summary") or (e.get("content") or [{}])[0].get("value", "")
         prefix = cfg.get("title_prefix")
         items.append(
             Item(
                 id=f"{cfg['id']}:{e.get('id') or link}",
-                title=f"{prefix} {title}" if prefix else title,
+                # 제목에 이미 이름이 있으면(예: "PHP 8.5.12") 접두어를 또 붙이지 않는다
+                title=f"{prefix} {title}"
+                if prefix and not title.lower().startswith(prefix.lower())
+                else title,
                 url=link,
                 source=cfg.get("name", cfg["id"]),
                 category=cfg.get("category", "it"),
@@ -272,6 +278,60 @@ def fetch_hn_search(cfg: dict) -> list[Item]:
     return list(found.values())
 
 
+def fetch_hf_trending(cfg: dict) -> list[Item]:
+    """Hugging Face 트렌딩 모델 (좋아요 하한으로 새로 뜨는 모델만)."""
+    data = _get(
+        "https://huggingface.co/api/models",
+        params={"sort": "trendingScore", "limit": cfg.get("limit", 20)},
+    ).json()
+    min_likes = int(cfg.get("min_likes", 100))
+    items = []
+    for m in data:
+        mid = m.get("id") or m.get("modelId")
+        likes = m.get("likes", 0)
+        if not mid or likes < min_likes:
+            continue
+        pipe = m.get("pipeline_tag") or ""
+        tags = ", ".join((m.get("tags") or [])[:8])
+        items.append(
+            Item(
+                id=f"hfm:{mid}",
+                title=f"HF 트렌딩 모델: {mid}" + (f" ({pipe})" if pipe else ""),
+                url=f"https://huggingface.co/{mid}",
+                source=f"Hugging Face ♥{likes}",
+                category=cfg.get("category", "ai"),
+                body=_clean(f"task: {pipe}. tags: {tags}. downloads: {m.get('downloads', 0)}"),
+            )
+        )
+    return items
+
+
+def fetch_hf_papers(cfg: dict) -> list[Item]:
+    """Hugging Face Daily Papers (추천 수 하한으로 화제가 된 논문만)."""
+    data = _get(
+        "https://huggingface.co/api/daily_papers", params={"limit": cfg.get("limit", 30)}
+    ).json()
+    min_up = int(cfg.get("min_upvotes", 20))
+    items = []
+    for entry in data:
+        p = entry.get("paper") or {}
+        pid = p.get("id")
+        title = p.get("title") or entry.get("title")
+        if not pid or not title or p.get("upvotes", 0) < min_up:
+            continue
+        items.append(
+            Item(
+                id=f"hfp:{pid}",
+                title=title,
+                url=f"https://huggingface.co/papers/{pid}",
+                source=f"HF Papers ▲{p.get('upvotes', 0)}",
+                category=cfg.get("category", "ai"),
+                body=_clean(p.get("summary") or entry.get("summary") or ""),
+            )
+        )
+    return items
+
+
 FETCHERS = {
     "kev": fetch_kev,
     "ghsa": fetch_ghsa,
@@ -279,4 +339,6 @@ FETCHERS = {
     "rss": fetch_rss,
     "github_search": fetch_github_search,
     "hn_search": fetch_hn_search,
+    "hf_trending": fetch_hf_trending,
+    "hf_papers": fetch_hf_papers,
 }

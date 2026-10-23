@@ -16,10 +16,12 @@ class Store:
         self.path = Path(path)
         self.ids: dict[str, int] = {}
         self.seeded: set[str] = set()
+        self.meta: dict = {}  # 경고 시각 등 소소한 상태
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding="utf-8") or "{}")
             self.ids = dict(data.get("ids", {}))
             self.seeded = set(data.get("seeded", []))
+            self.meta = dict(data.get("meta", {}))
 
     def has(self, item_id: str) -> bool:
         return item_id in self.ids
@@ -31,7 +33,11 @@ class Store:
         cutoff = int(time.time()) - KEEP_SECONDS
         self.ids = {k: v for k, v in self.ids.items() if v >= cutoff}
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"seeded": sorted(self.seeded), "ids": dict(sorted(self.ids.items()))}
+        payload = {
+            "seeded": sorted(self.seeded),
+            "meta": self.meta,
+            "ids": dict(sorted(self.ids.items())),
+        }
         self.path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
         )

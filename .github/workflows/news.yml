@@ -2,7 +2,7 @@ name: news-bot
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # 30분마다 (GitHub 사정으로 몇 분 밀릴 수 있음)
+    - cron: "7,37 * * * *"   # 30분 간격(UTC). 정각·30분은 GitHub이 가장 붐벼 지연·누락이 잦아서 피함
   workflow_dispatch:
     inputs:
       test:
