@@ -37,6 +37,7 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
     new_items: list[Item] = []
     ok = failed = 0
     seen_in_run: set[str] = set()
+    first_run_preview = max(0, int(cfg.get("first_run_preview", 0)))
     for src in cfg["sources"]:
         fetch = FETCHERS.get(src["type"])
         if fetch is None:
@@ -52,10 +53,17 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
         for it in fetched:
             it.src_id = src["id"]
         if src["id"] not in store.seeded:
-            for it in fetched:
+            # 처음 붙인 소스: 최신 N건은 미리보기로 보내고, 나머지는 기존 글로만 기록
+            preview = fetched[:first_run_preview]
+            for it in fetched[first_run_preview:]:
                 store.add(it.id)
             store.seeded.add(src["id"])
-            log(f"[seed] {src['id']}: {len(fetched)}건을 기존 글로 기록(전송 안 함)")
+            seen_in_run.update(i.id for i in preview)
+            new_items.extend(preview)
+            log(
+                f"[seed] {src['id']}: 미리보기 {len(preview)}건 전송, "
+                f"{len(fetched) - len(preview)}건은 기존 글로 기록"
+            )
             continue
         fresh = []
         for it in fetched:
