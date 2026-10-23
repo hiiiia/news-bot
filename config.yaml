@@ -1,0 +1,104 @@
+# news-bot 설정. 소스를 추가/삭제하려면 sources 목록만 고치면 됩니다.
+# 새로 추가한 소스는 첫 실행 때 기존 글을 조용히 "본 것"으로만 기록하고,
+# 그 다음 실행부터 새 글만 전송합니다.
+
+max_items_per_run: 20   # 한 번에 보낼 최대 건수 (넘치면 다음 실행으로 이월)
+
+# 보안 카테고리 제목에 아래 단어가 있으면 🚨 긴급으로 표시
+urgent_keywords:
+  - zero-day
+  - 0-day
+  - actively exploited
+  - exploited in the wild
+  - remote code execution
+  - rce
+  - ransomware
+  - 제로데이
+  - 긴급
+
+sources:
+  # ── 보안: 1차 소스 ─────────────────────────────
+  - id: kev
+    type: kev
+    url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+    limit: 20
+
+  - id: ghsa
+    type: ghsa
+    limit: 50
+    severities: [critical, high]
+
+  - id: nvd
+    type: nvd
+    lookback_hours: 3      # 30분 주기 + 지연 여유
+    min_cvss: 8.0          # 이 점수 이상만 전송
+    urgent_cvss: 9.0       # 이 점수 이상은 🚨
+
+  # ── 보안: 주요 프로젝트 릴리스 (패치 릴리스 즉시 감지) ──
+  - id: rel-php
+    type: rss
+    name: "Release: php-src"
+    category: security
+    url: https://github.com/php/php-src/tags.atom
+    exclude_keywords: [alpha, beta, rc]
+  - id: rel-openssl
+    type: rss
+    name: "Release: openssl"
+    category: security
+    url: https://github.com/openssl/openssl/releases.atom
+  - id: rel-nginx
+    type: rss
+    name: "Release: nginx"
+    category: security
+    url: https://github.com/nginx/nginx/releases.atom
+  - id: rel-curl
+    type: rss
+    name: "Release: curl"
+    category: security
+    url: https://github.com/curl/curl/releases.atom
+  - id: rel-openssh
+    type: rss
+    name: "Release: openssh"
+    category: security
+    url: https://github.com/openssh/openssh-portable/tags.atom
+
+  # ── 보안: 뉴스 (보조) ─────────────────────────
+  - id: thn
+    type: rss
+    name: The Hacker News
+    category: security
+    url: https://feeds.feedburner.com/TheHackersNews
+  - id: bleeping
+    type: rss
+    name: BleepingComputer
+    category: security
+    url: https://www.bleepingcomputer.com/feed/
+
+  # ── IT ─────────────────────────────────────
+  - id: geeknews
+    type: rss
+    name: GeekNews
+    category: it
+    url: https://news.hada.io/rss/news
+  - id: hn
+    type: rss
+    name: Hacker News (200점+)
+    category: it
+    url: https://hnrss.org/newest?points=200
+
+  # ── AI ─────────────────────────────────────
+  - id: openai
+    type: rss
+    name: OpenAI News
+    category: ai
+    url: https://openai.com/news/rss.xml
+  - id: hf-blog
+    type: rss
+    name: Hugging Face Blog
+    category: ai
+    url: https://huggingface.co/blog/feed.xml
+  - id: google-ai
+    type: rss
+    name: Google AI Blog
+    category: ai
+    url: https://blog.google/technology/ai/rss/
