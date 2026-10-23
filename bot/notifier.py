@@ -17,11 +17,12 @@ class TelegramError(RuntimeError):
 
 def format_item(item: Item) -> str:
     icon = "🚨" if item.urgent else "•"
-    label = CATEGORY_LABEL.get(item.category, item.category)
+    label = item.label or CATEGORY_LABEL.get(item.category, item.category)
     title = html.escape(item.title[:300])
     meta = html.escape(item.source + (f" · {item.extra}" if item.extra else ""))
     url = html.escape(item.url, quote=True)
-    return f"{icon} <b>[{label}]</b> {title}\n<i>{meta}</i>\n{url}"
+    summary = f"\n└ {html.escape(item.summary[:200])}" if item.summary else ""
+    return f"{icon} <b>[{html.escape(label)}]</b> {title}{summary}\n<i>{meta}</i>\n{url}"
 
 
 class Telegram:

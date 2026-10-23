@@ -5,6 +5,14 @@
 first_run_preview: 1    # 소스당 미리보기 건수 (0이면 전부 조용히 기록만)
 max_items_per_run: 20   # 한 번에 보낼 최대 건수 (넘치면 다음 실행으로 이월)
 
+# Claude 요약·관련도 판단. ANTHROPIC_API_KEY 시크릿이 없거나 호출이 실패하면
+# 요약 없이 기존 형식으로 전송됩니다.
+summarizer:
+  enabled: true
+  model: claude-haiku-5-5
+  batch_size: 10        # 한 번의 API 호출에 묶을 항목 수
+  max_summarize: 40     # 한 실행에서 요약할 최대 항목 수 (넘친 건 다음 실행으로)
+
 # 보안 카테고리 제목에 아래 단어가 있으면 🚨 긴급으로 표시
 urgent_keywords:
   - zero-day
@@ -17,51 +25,67 @@ urgent_keywords:
   - 제로데이
   - 긴급
 
+# relevance_filter: false  → 관련도 판단과 무관하게 항상 전송 (요약만 붙음)
+# relevance_filter 생략(기본 true) → Claude가 "관련 없음"으로 판단하면 보내지 않음
 sources:
   # ── 보안: 1차 소스 ─────────────────────────────
   - id: kev
     type: kev
     url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
     limit: 20
+    relevance_filter: false
 
   - id: ghsa
     type: ghsa
     limit: 50
     severities: [critical, high]
+    relevance_filter: false
 
   - id: nvd
     type: nvd
     lookback_hours: 3      # 30분 주기 + 지연 여유
     min_cvss: 8.0          # 이 점수 이상만 전송
     urgent_cvss: 9.0       # 이 점수 이상은 🚨
+    relevance_filter: false
 
   # ── 보안: 주요 프로젝트 릴리스 (패치 릴리스 즉시 감지) ──
   - id: rel-php
     type: rss
     name: "Release: php-src"
+    title_prefix: "PHP"
     category: security
     url: https://github.com/php/php-src/tags.atom
     exclude_keywords: [alpha, beta, rc]
+    relevance_filter: false
   - id: rel-openssl
     type: rss
     name: "Release: openssl"
+    title_prefix: "OpenSSL"
     category: security
     url: https://github.com/openssl/openssl/releases.atom
+    exclude_keywords: [alpha, beta, rc]
+    relevance_filter: false
   - id: rel-nginx
     type: rss
     name: "Release: nginx"
+    title_prefix: "nginx"
     category: security
     url: https://github.com/nginx/nginx/releases.atom
+    relevance_filter: false
   - id: rel-curl
     type: rss
     name: "Release: curl"
+    title_prefix: "curl"
     category: security
     url: https://github.com/curl/curl/releases.atom
+    relevance_filter: false
   - id: rel-openssh
     type: rss
     name: "Release: openssh"
+    title_prefix: "OpenSSH"
     category: security
     url: https://github.com/openssh/openssh-portable/tags.atom
+    relevance_filter: false
 
   # ── 보안: 뉴스 (보조) ─────────────────────────
   - id: thn
@@ -87,7 +111,7 @@ sources:
     category: it
     url: https://hnrss.org/newest?points=200
 
-  # ── AI ─────────────────────────────────────
+  # ── AI: 공식 블로그 ─────────────────────────
   - id: openai
     type: rss
     name: OpenAI News
@@ -103,3 +127,31 @@ sources:
     name: Google AI Blog
     category: ai
     url: https://blog.google/technology/ai/rss/
+
+  # ── AI: 탐색형 (에이전트 스킬 · MCP · 신모델 소식) ──
+  # 소스를 일일이 지정하지 않고 검색으로 새 항목을 찾습니다.
+  # 별 개수·HN 점수 하한으로 스팸을 막고, Claude가 관련도와 [AI-스킬] 라벨을 판단합니다.
+  - id: gh-skills
+    type: github_search
+    category: ai
+    since_days: 7          # 최근 7일 안에 만들어진 저장소
+    min_stars: 30          # 별 30개 이상
+    limit: 15              # 검색어당 최대 건수
+    queries:
+      - "topic:claude-skills created:>{since}"
+      - "topic:agent-skills created:>{since}"
+      - "topic:mcp-server created:>{since}"
+      - "SKILL.md in:readme created:>{since}"
+  - id: hn-ai
+    type: hn_search
+    category: ai
+    lookback_hours: 48
+    min_points: 50
+    limit: 20
+    queries:
+      - "agent skills"
+      - "SKILL.md"
+      - "MCP server"
+      - "Claude Code"
+      - "LLM benchmark"
+      - "open-weight model"

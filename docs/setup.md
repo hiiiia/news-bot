@@ -38,6 +38,7 @@ git push -u origin main
 | --- | --- |
 | `TELEGRAM_BOT_TOKEN` | 봇 토큰 |
 | `TELEGRAM_CHAT_ID` | 채팅 ID |
+| `ANTHROPIC_API_KEY` | Anthropic Console에서 발급한 API 키 (요약 기능용, 선택) |
 
 토큰은 코드, 채팅, 이슈 어디에도 붙여 넣지 말고 여기에만 넣으세요.
 
@@ -46,6 +47,19 @@ git push -u origin main
 1. Actions 탭 → `news-bot` → Run workflow → **test** 체크 → 실행. 텔레그램에 테스트 메시지가 오면 전송 설정은 끝입니다.
 2. 같은 화면에서 test 체크를 빼고 한 번 더 실행합니다. 소스마다 최신 글 1건이 미리보기로 오니, 실제 알림 형태를 여기서 확인할 수 있습니다. 이미 한 번 실행해서 `state/seen.json`에 기록이 남아 있다면, 파일 내용을 `{"seeded": [], "ids": {}}`로 되돌리고 커밋한 뒤 다시 실행하세요.
 3. 이후 30분마다 자동 실행됩니다. 실행 로그에서 소스별로 `[ok]`, `[fail]`, `[seed]` 상태를 볼 수 있습니다.
+
+## 요약 기능 (Claude)
+
+새 글을 모아서 Claude(Haiku)에 한 번에 보내 **한국어 요약, 관련도 판단, 라벨**을 받습니다. 메시지에는 제목 아래 `└ 요약` 줄이 붙습니다.
+
+- **API 키**: Anthropic Console에서 발급해 Secrets에 `ANTHROPIC_API_KEY`로 등록하세요. 채팅이나 코드에는 붙여 넣지 마세요.
+- **Max 구독자 크레딧**: Max 5x는 월 $100, Max 20x는 월 $200의 API 크레딧이 포함됩니다. claude.ai → Settings → Billing → API credits에서 Console 조직을 연결(Link organization)하면 되고, 해당 플랜에 가입한 지 7일이 지나야 신청할 수 있습니다. 크레딧은 매 결제 주기에 사라지며 이월되지 않습니다. Pro와 Free는 해당되지 않습니다.
+- **크레딧이 떨어지거나 호출이 실패하면** 요약 없이 기존 형식으로 전송됩니다. 알림은 끊기지 않습니다.
+- **관련도 판단**: `relevance_filter: false`인 1차 보안 소스(KEV, GitHub Advisory, NVD, 주요 릴리스)는 항상 전송되고 요약만 붙습니다. 뉴스·커뮤니티·탐색 소스는 Claude가 "관련 없음"으로 판단한 글을 보내지 않습니다.
+- **탐색형 소스**: `gh-skills`(GitHub 토픽/키워드 검색)와 `hn-ai`(Hacker News 키워드 검색)가 새 에이전트 스킬, MCP 서버, 신모델 소식을 찾아 `[AI-스킬]` 같은 라벨로 보냅니다. 너무 많으면 `min_stars`, `min_points`를 올리세요.
+- **끄기**: `config.yaml`에서 `summarizer.enabled: false`.
+- **안전장치**: 외부 글은 요약 대상 데이터로만 다루고 Claude에게 도구나 권한은 주지 않습니다. 응답에서 URL은 제거하고 라벨은 허용 목록만 받습니다.
+- **비용 확인**: Console의 사용량 화면에서 확인하세요. 로컬 `--dry-run`도 키가 환경변수에 있으면 API를 호출합니다.
 
 ## 로컬에서 시험해 보기
 

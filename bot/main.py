@@ -17,6 +17,7 @@ import yaml
 from .notifier import Telegram, TelegramError, format_item
 from .sources import FETCHERS, Item
 from .store import Store
+from .summarizer import annotate
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -52,6 +53,8 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
         ok += 1
         for it in fetched:
             it.src_id = src["id"]
+            # 1차 보안 소스 등은 관련도 판단과 무관하게 항상 전송 (요약만 붙임)
+            it.must_send = not src.get("relevance_filter", True)
         if src["id"] not in store.seeded:
             # 처음 붙인 소스: 최신 N건은 미리보기로 보내고, 나머지는 기존 글로만 기록
             preview = fetched[:first_run_preview]
@@ -74,6 +77,30 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
         log(f"[ok]   {src['id']}: 전체 {len(fetched)}건 / 새 글 {len(fresh)}건")
         new_items.extend(fresh)
     return new_items, ok, failed
+
+
+def prepare(items: list[Item], cfg: dict, store: Store, log=print) -> list[Item]:
+    """긴급 우선 정렬 → (켜져 있으면) Claude 요약·관련도 판단 → 관련 없는 글은 기록만 하고 제외."""
+    items = sorted(items, key=lambda i: not i.urgent)
+    scfg = cfg.get("summarizer") or {}
+    if not scfg.get("enabled"):
+        return items
+    # 한 번에 요약할 양을 제한. 넘친 항목은 기록하지 않으므로 다음 실행에서 다시 잡힌다.
+    items = items[: int(scfg.get("max_summarize", 40))]
+    annotate(
+        items,
+        model=scfg.get("model", "claude-haiku-5-5"),
+        batch_size=int(scfg.get("batch_size", 10)),
+        log=log,
+    )
+    kept = []
+    for it in items:
+        if it.relevant is False and not it.must_send:
+            store.add(it.id)  # 다시 판단하지 않도록 본 것으로 기록
+            log(f"[drop] {it.id}: 관련 없음")
+        else:
+            kept.append(it)
+    return kept
 
 
 def deliver(items, send, store: Store, limit: int, log=print) -> int:
@@ -121,10 +148,12 @@ def main(argv: list[str] | None = None) -> int:
     store = Store("state/seen.json")
     items, ok, failed = collect(cfg, store)
     mark_urgent(items, cfg.get("urgent_keywords", []))
+    items = prepare(items, cfg, store)
 
     if args.dry_run:
-        for it in sorted(items, key=lambda i: not i.urgent):
-            print(("🚨 " if it.urgent else "• ") + f"[{it.category}] {it.title}  {it.url}")
+        for it in items:
+            line = ("🚨 " if it.urgent else "• ") + f"[{it.label or it.category}] {it.title}  {it.url}"
+            print(line + (f"\n    └ {it.summary}" if it.summary else ""))
         print(f"dry-run: 새 글 {len(items)}건 (전송·저장 안 함)")
         return 0
 

@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import datetime as dt
+import html
 import os
+import re
+import time
 from dataclasses import dataclass
 
 import feedparser
@@ -22,6 +25,11 @@ class Item:
     urgent: bool = False
     extra: str = ""
     src_id: str = ""  # 어떤 소스 설정에서 왔는지 (main에서 채움)
+    body: str = ""  # 요약 재료 (릴리스 노트, CVE 설명, 글 요약 등)
+    summary: str = ""  # Claude가 만든 한국어 요약
+    label: str = ""  # Claude가 정한 라벨 (보안/IT/AI/AI-스킬), 없으면 category 사용
+    relevant: bool | None = None  # Claude의 관련도 판단 (None=판단 안 함)
+    must_send: bool = False  # True면 관련도 판단과 무관하게 항상 전송 (1차 보안 소스 등)
 
 
 def _get(url: str, **kwargs) -> requests.Response:
@@ -29,6 +37,23 @@ def _get(url: str, **kwargs) -> requests.Response:
     resp = requests.get(url, headers=headers, timeout=TIMEOUT, **kwargs)
     resp.raise_for_status()
     return resp
+
+
+_TAG = re.compile(r"<[^>]+>")
+
+
+def _clean(text: str, limit: int = 1500) -> str:
+    """HTML 태그를 걷어내고 공백을 정리해 요약 재료로 쓸 수 있게 자른다."""
+    text = html.unescape(_TAG.sub(" ", text or ""))
+    return re.sub(r"\s+", " ", text).strip()[:limit]
+
+
+def _gh_headers() -> dict:
+    headers = {"Accept": "application/vnd.github+json"}
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 
 def fetch_kev(cfg: dict) -> list[Item]:
@@ -53,6 +78,7 @@ def fetch_kev(cfg: dict) -> list[Item]:
                 category="security",
                 urgent=True,
                 extra="실제 악용 확인",
+                body=_clean(f"{v.get('shortDescription', '')} {v.get('requiredAction', '')}"),
             )
         )
     return items
@@ -95,6 +121,7 @@ def fetch_ghsa(cfg: dict) -> list[Item]:
                 category="security",
                 urgent=sev == "critical",
                 extra=f"{sev}" + (f" · {', '.join(pkgs[:2])}" if pkgs else ""),
+                body=_clean(a.get("description") or a.get("summary") or ""),
             )
         )
     return items
@@ -138,6 +165,7 @@ def fetch_nvd(cfg: dict) -> list[Item]:
                 category="security",
                 urgent=score >= urgent_cvss,
                 extra=f"CVSS {score}",
+                body=_clean(desc),
             )
         )
     return items
@@ -160,16 +188,88 @@ def fetch_rss(cfg: dict) -> list[Item]:
             continue
         if exclude and any(k in title.lower() for k in exclude):
             continue
+        raw = e.get("summary") or (e.get("content") or [{}])[0].get("value", "")
+        prefix = cfg.get("title_prefix")
         items.append(
             Item(
                 id=f"{cfg['id']}:{e.get('id') or link}",
-                title=title,
+                title=f"{prefix} {title}" if prefix else title,
                 url=link,
                 source=cfg.get("name", cfg["id"]),
                 category=cfg.get("category", "it"),
+                body=_clean(raw),
             )
         )
     return items
+
+
+def fetch_github_search(cfg: dict) -> list[Item]:
+    """GitHub 저장소 검색으로 새 에이전트 스킬·MCP 서버 등을 탐색 (별 개수 하한으로 스팸 차단)."""
+    since_days = int(cfg.get("since_days", 7))
+    since = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=since_days)).strftime("%Y-%m-%d")
+    min_stars = int(cfg.get("min_stars", 0))
+    found: dict[str, Item] = {}
+    for n, q in enumerate(cfg["queries"]):
+        if n:
+            time.sleep(2)  # 검색 API 분당 한도 보호
+        query = q.format(since=since) + (f" stars:>={min_stars}" if min_stars else "")
+        data = _get(
+            "https://api.github.com/search/repositories",
+            headers=_gh_headers(),
+            params={
+                "q": query,
+                "sort": "stars",
+                "order": "desc",
+                "per_page": cfg.get("limit", 15),
+            },
+        ).json()
+        for repo in data.get("items", []):
+            name = repo["full_name"]
+            if name in found:
+                continue
+            desc = repo.get("description") or ""
+            topics = ", ".join((repo.get("topics") or [])[:6])
+            found[name] = Item(
+                id=f"gh:{name}",
+                title=f"{name} — {desc}" if desc else name,
+                url=repo["html_url"],
+                source=f"GitHub ★{repo.get('stargazers_count', 0)}",
+                category=cfg.get("category", "ai"),
+                body=_clean(f"{desc} 토픽: {topics}"),
+            )
+    return list(found.values())
+
+
+def fetch_hn_search(cfg: dict) -> list[Item]:
+    """Hacker News 키워드 검색(Algolia). 최근 N시간 + 점수 하한."""
+    since_ts = int(time.time()) - int(cfg.get("lookback_hours", 48)) * 3600
+    min_points = int(cfg.get("min_points", 50))
+    found: dict[str, Item] = {}
+    for n, q in enumerate(cfg["queries"]):
+        if n:
+            time.sleep(0.5)
+        data = _get(
+            "https://hn.algolia.com/api/v1/search_by_date",
+            params={
+                "query": q,
+                "tags": "story",
+                "numericFilters": f"points>{min_points},created_at_i>{since_ts}",
+                "hitsPerPage": cfg.get("limit", 20),
+            },
+        ).json()
+        for h in data.get("hits", []):
+            oid, title = h.get("objectID"), h.get("title")
+            if not oid or not title or oid in found:
+                continue
+            found[oid] = Item(
+                id=f"hns:{oid}",
+                title=title,
+                url=h.get("url") or f"https://news.ycombinator.com/item?id={oid}",
+                source=f"Hacker News {h.get('points', 0)}점",
+                category=cfg.get("category", "ai"),
+                body=_clean(h.get("story_text") or ""),
+            )
+    return list(found.values())
 
 
 FETCHERS = {
@@ -177,4 +277,6 @@ FETCHERS = {
     "ghsa": fetch_ghsa,
     "nvd": fetch_nvd,
     "rss": fetch_rss,
+    "github_search": fetch_github_search,
+    "hn_search": fetch_hn_search,
 }
