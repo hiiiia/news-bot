@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1792920257
+  "summary_warn_at": 1792949930
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/google/google-chrome-adds-gemini-powered-scam-detection-warns-users-of-clickfix-attacks/": 1792757018,
@@ -58,6 +58,7 @@
   "bleeping:https://www.bleepingcomputer.com/news/microsoft/microsoft-teams-to-get-ai-powered-context-aware-phishing-detection/": 1792826143,
   "bleeping:https://www.bleepingcomputer.com/news/microsoft/microsoft-windows-server-2016-reaches-end-of-support-in-january/": 1792826145,
   "bleeping:https://www.bleepingcomputer.com/news/security/abandoned-popcorn-time-app-exposed-millions-of-device-to-rce-attacks/": 1792798160,
+  "bleeping:https://www.bleepingcomputer.com/news/security/ai-coding-agents-hijacked-using-agentsmd-file-in-downloads-folder/": 1792949929,
   "bleeping:https://www.bleepingcomputer.com/news/security/amazon-says-php2shell-exploitation-began-4-days-before-patches/": 1792757018,
   "bleeping:https://www.bleepingcomputer.com/news/security/arista-patches-new-velocloud-orchestrator-zero-day-exploited-in-attacks/": 1792757018,
   "bleeping:https://www.bleepingcomputer.com/news/security/authorities-disrupt-nearly-11-000-cybercrime-networks-in-africa/": 1792757018,
@@ -536,6 +537,25 @@
   "nvd:CVE-2026-116067": 1792936513,
   "nvd:CVE-2026-116068": 1792936515,
   "nvd:CVE-2026-116071": 1792936511,
+  "nvd:CVE-2026-116163": 1792949899,
+  "nvd:CVE-2026-116165": 1792949909,
+  "nvd:CVE-2026-116171": 1792949910,
+  "nvd:CVE-2026-116172": 1792949912,
+  "nvd:CVE-2026-116173": 1792949913,
+  "nvd:CVE-2026-116174": 1792949915,
+  "nvd:CVE-2026-116176": 1792949901,
+  "nvd:CVE-2026-116177": 1792949902,
+  "nvd:CVE-2026-116178": 1792949916,
+  "nvd:CVE-2026-116179": 1792949904,
+  "nvd:CVE-2026-116180": 1792949918,
+  "nvd:CVE-2026-116183": 1792949920,
+  "nvd:CVE-2026-116191": 1792949921,
+  "nvd:CVE-2026-116192": 1792949923,
+  "nvd:CVE-2026-116199": 1792949905,
+  "nvd:CVE-2026-116200": 1792949907,
+  "nvd:CVE-2026-116201": 1792949924,
+  "nvd:CVE-2026-116207": 1792949926,
+  "nvd:CVE-2026-116211": 1792949927,
   "nvd:CVE-2026-16762": 1792757018,
   "nvd:CVE-2026-19677": 1792757031,
   "nvd:CVE-2026-19678": 1792757018,
