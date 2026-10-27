@@ -7,7 +7,8 @@ first_run_preview_max: 8  # 한 번에 쏟아지지 않게, 첫 실행 전체 �
 max_items_per_run: 20     # 한 번에 보낼 최대 건수 (넘치면 다음 실행으로 이월)
 fetch_workers: 8          # 소스를 동시에 가져오는 개수
 
-# Claude 편집: 새 글 전체에 중요도(0~10)를 매겨 중요한 것만 골라 한국어로 요약해 보냅니다.
+# Claude 편집: 새 글 전체에 중요도(0~10)를 매기고, 기준을 넘은 후보를 한 번에 비교해
+# 같은 사건은 하나로 묶은 뒤 최종 3~5건만 한국어로 요약해 보냅니다.
 # 기준을 넘는 글이 없으면 아무것도 보내지 않습니다.
 # ANTHROPIC_API_KEY 시크릿이 없거나 호출이 실패하면 🚨 긴급 글만 요약 없이 보내고,
 # 나머지는 기록하지 않고 다음 실행에서 다시 평가합니다.
@@ -15,10 +16,11 @@ summarizer:
   enabled: true
   model: claude-opus-5-5   # 더 가볍게: claude-sonnet-5-5 / claude-haiku-5-5
   min_importance: 7        # 이 점수 이상만 전송 (올리면 더 박해지고, 내리면 더 많이 옴)
-  max_picks: 10            # 한 번에 보낼 최대 건수 (넘치면 높은 점수 순, 나머지는 다음 실행)
+  max_picks: 5             # 최종 전송 최대 건수. 같은 사건은 하나로 묶고 보통 3~5건
+  final_candidates: 20     # 최종 선택에 올릴 후보 수 (기준 점수를 넘은 것 중 높은 순)
   max_candidates: 150      # 한 번에 평가할 최대 새 글 수 (넘친 건 다음 실행으로)
   triage_batch: 50         # 평가 API 한 번에 묶을 글 수
-  summary_batch: 8         # 요약 API 한 번에 묶을 글 수
+  summary_batch: 4         # 요약 API 한 번에 묶을 글 수 (한국어는 토큰을 많이 써서 작게)
 
 # 보안 카테고리 제목에 아래 단어가 있으면 🚨 긴급으로 표시
 urgent_keywords:

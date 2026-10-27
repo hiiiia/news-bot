@@ -20,7 +20,7 @@ from .notifier import Telegram, TelegramError, format_item
 from .sources import FETCHERS, Item
 from .store import Store
 from .articles import enrich
-from .summarizer import DEFAULT_MODEL, summarize, triage
+from .summarizer import DEFAULT_MODEL, select, summarize, triage
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -96,12 +96,15 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
 def prepare(
     items: list[Item], cfg: dict, store: Store, log=print, notes: list[str] | None = None
 ) -> list[Item]:
-    """Claude가 중요한 글만 고르고(triage) 요약한다(summarize). 보낼 글이 없으면 빈 목록.
+    """Claude가 중요한 글만 고르고 요약한다. 보낼 글이 없으면 빈 목록.
 
-    - 기준 점수(min_importance) 미만은 다시 판단하지 않도록 '본 것'으로 기록하고 버린다.
-    - 기준 이상이 max_picks 를 넘으면 점수 높은 순으로 자르고, 나머지는 기록하지 않아 다음 실행에서 다시 잡힌다.
-    - 평가 자체가 실패하면(키 오류·크레딧 소진 등) 아무것도 기록하지 않고 다음 실행으로 넘긴다.
-      긴급(🚨) 글만 요약 없이 보내고, 원인은 notes 에 넣는다.
+    1) triage   : 새 글마다 중요도를 매긴다. 기준(min_importance) 미만은 '본 것'으로 기록하고 버린다.
+    2) select   : 기준 이상 후보(최대 final_candidates건)를 한 번에 비교해 같은 사건은 하나로 묶고
+                  최종 max_picks건 이내로 고른다. 탈락한 후보도 '본 것'으로 기록한다(중복·재탕 방지).
+                  선택 호출이 실패하면 점수순으로 max_picks건을 대신 고른다.
+    3) summarize: 고른 글만 원문을 보강해 요약한다.
+    평가 자체가 실패하면(키 오류·크레딧 소진 등) 아무것도 기록하지 않고 다음 실행으로 넘긴다.
+    긴급(🚨) 글만 요약 없이 보내고, 원인은 notes 에 넣는다.
     """
     items = sorted(items, key=lambda i: not i.urgent)
     scfg = cfg.get("summarizer") or {}
@@ -109,40 +112,52 @@ def prepare(
         return items
     model = scfg.get("model", DEFAULT_MODEL)
     min_importance = int(scfg.get("min_importance", 7))
-    max_picks = int(scfg.get("max_picks", 10))
+    max_picks = int(scfg.get("max_picks", 5))
+    final_candidates = int(scfg.get("final_candidates", 20))
     # 한 번에 평가할 양을 제한. 넘친 항목은 기록하지 않으므로 다음 실행에서 다시 잡힌다.
     cands = items[: int(scfg.get("max_candidates", 150))]
     if len(items) > len(cands):
         log(f"[defer] 평가 한도를 넘은 {len(items) - len(cands)}건은 다음 실행으로 넘김")
 
-    err = triage(cands, model=model, chunk_size=int(scfg.get("triage_batch", 50)), log=log)
-    if err and notes is not None:
-        notes.append(err)
+    def note(err):
+        if err and notes is not None and err not in notes:
+            notes.append(err)
+
+    note(triage(cands, model=model, chunk_size=int(scfg.get("triage_batch", 50)), log=log))
 
     scored = [i for i in cands if i.importance is not None]
     if not scored:  # 평가 실패: 긴급 글만 보내고 나머지는 다음 실행에서 다시 평가
-        picks = [i for i in cands if i.urgent]
+        picks = [i for i in cands if i.urgent][:max_picks]
     else:
         for it in scored:
             if it.importance < min_importance:
                 store.add(it.id)
                 log(f"[drop] {it.id}: 중요도 {it.importance}")
-        picks = sorted(
+        passed = sorted(
             (i for i in scored if i.importance >= min_importance),
             key=lambda i: (-i.importance, not i.urgent),
         )
-        if len(picks) > max_picks:
-            log(f"[defer] 중요한 글 {len(picks) - max_picks}건은 다음 실행으로 넘김")
-            picks = picks[:max_picks]
-    log(f"[pick] 평가 {len(scored)}/{len(cands)}건 → 전송 대상 {len(picks)}건")
+        if len(passed) > final_candidates:
+            log(f"[defer] 후보 {len(passed) - final_candidates}건은 다음 실행으로 넘김")
+            passed = passed[:final_candidates]
+        final, err = select(passed, model=model, max_picks=max_picks, log=log)
+        note(err)
+        if final is None:
+            picks = passed[:max_picks]  # 선택 실패: 점수순 대체 (탈락분은 기록하지 않음)
+        else:
+            picks = final
+            chosen = {i.id for i in final}
+            for it in passed:
+                if it.id not in chosen:
+                    store.add(it.id)
+                    log(f"[skip] {it.id}: 최종 선택에서 제외(중복이거나 덜 중요)")
+    log(f"[pick] 평가 {len(scored)}/{len(cands)}건 → 최종 {len(picks)}건")
     if not picks:
         return []
 
     got = enrich(picks, log=log)
     log(f"[enrich] 원문 보강 {got}건")
-    err = summarize(picks, model=model, batch_size=int(scfg.get("summary_batch", 8)), log=log)
-    if err and notes is not None and err not in notes:
-        notes.append(err)
+    note(summarize(picks, model=model, batch_size=int(scfg.get("summary_batch", 4)), log=log))
     return picks
 
 
