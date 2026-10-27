@@ -19,7 +19,8 @@ import yaml
 from .notifier import Telegram, TelegramError, format_item
 from .sources import FETCHERS, Item
 from .store import Store
-from .summarizer import annotate
+from .articles import enrich
+from .summarizer import DEFAULT_MODEL, summarize, triage
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -65,8 +66,6 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
         ok += 1
         for it in fetched:
             it.src_id = src["id"]
-            # 1차 보안 소스 등은 관련도 판단과 무관하게 항상 전송 (요약만 붙임)
-            it.must_send = not src.get("relevance_filter", True)
         if src["id"] not in store.seeded:
             # 처음 붙인 소스: 최신 N건은 미리보기로 보내고, 나머지는 기존 글로만 기록
             want = max(0, int(src.get("first_run_preview", default_preview)))
@@ -97,31 +96,54 @@ def collect(cfg: dict, store: Store, log=print) -> tuple[list[Item], int, int]:
 def prepare(
     items: list[Item], cfg: dict, store: Store, log=print, notes: list[str] | None = None
 ) -> list[Item]:
-    """긴급 우선 정렬 → (켜져 있으면) Claude 요약·관련도 판단 → 관련 없는 글은 기록만 하고 제외.
+    """Claude가 중요한 글만 고르고(triage) 요약한다(summarize). 보낼 글이 없으면 빈 목록.
 
-    요약이 실패하면 원인 문장을 notes 에 넣는다(글은 요약 없이 그대로 전송된다)."""
+    - 기준 점수(min_importance) 미만은 다시 판단하지 않도록 '본 것'으로 기록하고 버린다.
+    - 기준 이상이 max_picks 를 넘으면 점수 높은 순으로 자르고, 나머지는 기록하지 않아 다음 실행에서 다시 잡힌다.
+    - 평가 자체가 실패하면(키 오류·크레딧 소진 등) 아무것도 기록하지 않고 다음 실행으로 넘긴다.
+      긴급(🚨) 글만 요약 없이 보내고, 원인은 notes 에 넣는다.
+    """
     items = sorted(items, key=lambda i: not i.urgent)
     scfg = cfg.get("summarizer") or {}
     if not scfg.get("enabled"):
         return items
-    # 한 번에 요약할 양을 제한. 넘친 항목은 기록하지 않으므로 다음 실행에서 다시 잡힌다.
-    items = items[: int(scfg.get("max_summarize", 40))]
-    err = annotate(
-        items,
-        model=scfg.get("model", "claude-haiku-5-5"),
-        batch_size=int(scfg.get("batch_size", 10)),
-        log=log,
-    )
+    model = scfg.get("model", DEFAULT_MODEL)
+    min_importance = int(scfg.get("min_importance", 7))
+    max_picks = int(scfg.get("max_picks", 10))
+    # 한 번에 평가할 양을 제한. 넘친 항목은 기록하지 않으므로 다음 실행에서 다시 잡힌다.
+    cands = items[: int(scfg.get("max_candidates", 150))]
+    if len(items) > len(cands):
+        log(f"[defer] 평가 한도를 넘은 {len(items) - len(cands)}건은 다음 실행으로 넘김")
+
+    err = triage(cands, model=model, chunk_size=int(scfg.get("triage_batch", 50)), log=log)
     if err and notes is not None:
         notes.append(err)
-    kept = []
-    for it in items:
-        if it.relevant is False and not it.must_send:
-            store.add(it.id)  # 다시 판단하지 않도록 본 것으로 기록
-            log(f"[drop] {it.id}: 관련 없음")
-        else:
-            kept.append(it)
-    return kept
+
+    scored = [i for i in cands if i.importance is not None]
+    if not scored:  # 평가 실패: 긴급 글만 보내고 나머지는 다음 실행에서 다시 평가
+        picks = [i for i in cands if i.urgent]
+    else:
+        for it in scored:
+            if it.importance < min_importance:
+                store.add(it.id)
+                log(f"[drop] {it.id}: 중요도 {it.importance}")
+        picks = sorted(
+            (i for i in scored if i.importance >= min_importance),
+            key=lambda i: (-i.importance, not i.urgent),
+        )
+        if len(picks) > max_picks:
+            log(f"[defer] 중요한 글 {len(picks) - max_picks}건은 다음 실행으로 넘김")
+            picks = picks[:max_picks]
+    log(f"[pick] 평가 {len(scored)}/{len(cands)}건 → 전송 대상 {len(picks)}건")
+    if not picks:
+        return []
+
+    got = enrich(picks, log=log)
+    log(f"[enrich] 원문 보강 {got}건")
+    err = summarize(picks, model=model, batch_size=int(scfg.get("summary_batch", 8)), log=log)
+    if err and notes is not None and err not in notes:
+        notes.append(err)
+    return picks
 
 
 def deliver(items, send, store: Store, limit: int, log=print) -> int:
@@ -143,11 +165,11 @@ def deliver(items, send, store: Store, limit: int, log=print) -> int:
     return sent
 
 
-SUMMARY_WARN_INTERVAL = 6 * 3600  # 같은 경고는 6시간에 한 번만
+SUMMARY_WARN_INTERVAL = 5 * 3600  # 같은 경고는 5시간에 한 번만 (6시간 주기에서 매번 한 번씩)
 
 
 def warn_summary(send, store: Store, notes: list[str], log=print) -> None:
-    """요약이 실패했으면 이유를 텔레그램으로 한 번 알린다(30분마다 반복되지 않게 제한)."""
+    """요약이 실패했으면 이유를 텔레그램으로 한 번 알린다(자주 반복되지 않게 제한)."""
     if not notes:
         return
     log(f"[summary-warn] {notes[0]}")
@@ -187,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
                 category="security",
                 body="curl 8.23.0 fixes an out-of-bounds read in HTTP/2 handling and several minor bugs.",
             )
-            err = annotate([probe], model=scfg.get("model", "claude-haiku-5-5"))
+            err = summarize([probe], model=scfg.get("model", DEFAULT_MODEL))
             if probe.summary and not err:
                 tg.send(f"✅ 요약 연결 정상: {html.escape(probe.summary)}")
             else:

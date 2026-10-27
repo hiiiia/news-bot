@@ -2,7 +2,7 @@ name: news-bot
 
 on:
   schedule:
-    - cron: "7,37 * * * *"   # 30분 간격(UTC). 정각·30분은 GitHub이 가장 붐벼 지연·누락이 잦아서 피함
+    - cron: "23 */6 * * *"   # 6시간 간격(UTC 00·06·12·18시 23분 = 한국 09·15·21·03시 23분). 정각은 GitHub이 붐벼 피함
   workflow_dispatch:
     inputs:
       test:
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 

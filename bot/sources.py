@@ -28,8 +28,7 @@ class Item:
     body: str = ""  # 요약 재료 (릴리스 노트, CVE 설명, 글 요약 등)
     summary: str = ""  # Claude가 만든 한국어 요약
     label: str = ""  # Claude가 정한 라벨 (보안/IT/AI/AI-스킬), 없으면 category 사용
-    relevant: bool | None = None  # Claude의 관련도 판단 (None=판단 안 함)
-    must_send: bool = False  # True면 관련도 판단과 무관하게 항상 전송 (1차 보안 소스 등)
+    importance: int | None = None  # Claude가 매긴 중요도 0~10 (None=평가 못 함)
 
 
 def _get(url: str, **kwargs) -> requests.Response:

@@ -7,13 +7,18 @@ first_run_preview_max: 8  # 한 번에 쏟아지지 않게, 첫 실행 전체 �
 max_items_per_run: 20     # 한 번에 보낼 최대 건수 (넘치면 다음 실행으로 이월)
 fetch_workers: 8          # 소스를 동시에 가져오는 개수
 
-# Claude 요약·관련도 판단. ANTHROPIC_API_KEY 시크릿이 없거나 호출이 실패하면
-# 요약 없이 기존 형식으로 전송됩니다.
+# Claude 편집: 새 글 전체에 중요도(0~10)를 매겨 중요한 것만 골라 한국어로 요약해 보냅니다.
+# 기준을 넘는 글이 없으면 아무것도 보내지 않습니다.
+# ANTHROPIC_API_KEY 시크릿이 없거나 호출이 실패하면 🚨 긴급 글만 요약 없이 보내고,
+# 나머지는 기록하지 않고 다음 실행에서 다시 평가합니다.
 summarizer:
   enabled: true
-  model: claude-haiku-5-5
-  batch_size: 10        # 한 번의 API 호출에 묶을 항목 수
-  max_summarize: 40     # 한 실행에서 요약할 최대 항목 수 (넘친 건 다음 실행으로)
+  model: claude-opus-5-5   # 더 가볍게: claude-sonnet-5-5 / claude-haiku-5-5
+  min_importance: 7        # 이 점수 이상만 전송 (올리면 더 박해지고, 내리면 더 많이 옴)
+  max_picks: 10            # 한 번에 보낼 최대 건수 (넘치면 높은 점수 순, 나머지는 다음 실행)
+  max_candidates: 150      # 한 번에 평가할 최대 새 글 수 (넘친 건 다음 실행으로)
+  triage_batch: 50         # 평가 API 한 번에 묶을 글 수
+  summary_batch: 8         # 요약 API 한 번에 묶을 글 수
 
 # 보안 카테고리 제목에 아래 단어가 있으면 🚨 긴급으로 표시
 urgent_keywords:
@@ -31,9 +36,6 @@ urgent_keywords:
 _prerelease: &prerelease
   - '(alpha|beta|rc\d|\d[ab]\d|-M\d)'
 
-# relevance_filter: false  → 관련도 판단과 무관하게 항상 전송 (요약만 붙음)
-# relevance_filter 생략(기본 true) → Claude가 "관련 없음"으로 판단하면 보내지 않음
-#
 # 주소 검증 상태: [확인] = 이 설정을 만들 때 실제로 열어 봄, [미확인] = 열어 보지 못함.
 # [미확인] 소스가 실패하면 Actions 로그에 [fail]로 표시됩니다. 다른 소스에는 영향이 없습니다.
 sources:
@@ -42,20 +44,17 @@ sources:
     type: kev
     url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
     limit: 20
-    relevance_filter: false
 
   - id: ghsa
     type: ghsa
     limit: 50
     severities: [critical, high]
-    relevance_filter: false
 
   - id: nvd
     type: nvd
     lookback_hours: 12     # 스케줄이 몇 시간 밀려도 놓치지 않게 넉넉히 (중복은 기록으로 걸러짐)
     min_cvss: 8.0          # 이 점수 이상만 전송
     urgent_cvss: 9.0       # 이 점수 이상은 🚨
-    relevance_filter: false
 
   # ══ 보안: 권고문·연구자·메일링 리스트 ══════════════
   - id: cisa-advisories      # [미확인]
@@ -114,22 +113,22 @@ sources:
       - 'CVE-2026 in:name,description created:>{since}'
 
   # ══ 보안: 주요 프로젝트 릴리스 (패치 릴리스 즉시 감지) ══
-  - {id: rel-php, type: rss, name: "Release: php-src", title_prefix: PHP, category: security, limit: 5, relevance_filter: false, url: "https://github.com/php/php-src/tags.atom", exclude_regex: *prerelease}
-  - {id: rel-openssl, type: rss, name: "Release: openssl", title_prefix: OpenSSL, category: security, limit: 5, relevance_filter: false, url: "https://github.com/openssl/openssl/releases.atom", exclude_regex: *prerelease}
-  - {id: rel-nginx, type: rss, name: "Release: nginx", title_prefix: nginx, category: security, limit: 5, relevance_filter: false, url: "https://github.com/nginx/nginx/releases.atom"}
-  - {id: rel-curl, type: rss, name: "Release: curl", title_prefix: curl, category: security, limit: 5, relevance_filter: false, url: "https://github.com/curl/curl/releases.atom"}
-  - {id: rel-openssh, type: rss, name: "Release: openssh", title_prefix: OpenSSH, category: security, limit: 5, relevance_filter: false, url: "https://github.com/openssh/openssh-portable/tags.atom"}
-  - {id: rel-spring-fw, type: rss, name: "Release: Spring Framework", title_prefix: Spring Framework, category: security, limit: 5, relevance_filter: false, url: "https://github.com/spring-projects/spring-framework/releases.atom", exclude_regex: *prerelease}
-  - {id: rel-spring-boot, type: rss, name: "Release: Spring Boot", title_prefix: Spring Boot, category: security, limit: 5, relevance_filter: false, url: "https://github.com/spring-projects/spring-boot/releases.atom", exclude_regex: *prerelease}
-  - {id: rel-log4j, type: rss, name: "Release: Log4j", title_prefix: Log4j, category: security, limit: 5, relevance_filter: false, url: "https://github.com/apache/logging-log4j2/releases.atom", exclude_regex: *prerelease}
-  - {id: rel-tomcat, type: rss, name: "Release: Tomcat", title_prefix: Tomcat, category: security, limit: 5, relevance_filter: false, url: "https://github.com/apache/tomcat/tags.atom", exclude_regex: *prerelease}
-  - {id: rel-node, type: rss, name: "Release: Node.js", title_prefix: Node.js, category: security, limit: 5, relevance_filter: false, url: "https://github.com/nodejs/node/releases.atom", exclude_regex: *prerelease}
-  - {id: rel-python, type: rss, name: "Release: CPython", title_prefix: Python, category: security, limit: 5, relevance_filter: false, url: "https://github.com/python/cpython/tags.atom", exclude_regex: *prerelease}
-  - {id: rel-django, type: rss, name: "Release: Django", title_prefix: Django, category: security, limit: 5, relevance_filter: false, url: "https://github.com/django/django/tags.atom", exclude_regex: *prerelease}
-  - {id: rel-redis, type: rss, name: "Release: Redis", title_prefix: Redis, category: security, limit: 5, relevance_filter: false, url: "https://github.com/redis/redis/releases.atom", exclude_regex: *prerelease}
-  - {id: rel-moby, type: rss, name: "Release: Docker Engine", title_prefix: Docker, category: security, limit: 5, relevance_filter: false, url: "https://github.com/moby/moby/releases.atom", exclude_regex: *prerelease}
-  - {id: rel-linux, type: rss, name: "Release: Linux kernel", title_prefix: Linux, category: security, limit: 5, relevance_filter: false, url: "https://github.com/torvalds/linux/tags.atom", exclude_regex: *prerelease}
-  # 아래 둘은 릴리스가 잦아서 Claude가 사소한 건 거르도록 관련도 판단을 켜 둠
+  - {id: rel-php, type: rss, name: "Release: php-src", title_prefix: PHP, category: security, limit: 5, url: "https://github.com/php/php-src/tags.atom", exclude_regex: *prerelease}
+  - {id: rel-openssl, type: rss, name: "Release: openssl", title_prefix: OpenSSL, category: security, limit: 5, url: "https://github.com/openssl/openssl/releases.atom", exclude_regex: *prerelease}
+  - {id: rel-nginx, type: rss, name: "Release: nginx", title_prefix: nginx, category: security, limit: 5, url: "https://github.com/nginx/nginx/releases.atom"}
+  - {id: rel-curl, type: rss, name: "Release: curl", title_prefix: curl, category: security, limit: 5, url: "https://github.com/curl/curl/releases.atom"}
+  - {id: rel-openssh, type: rss, name: "Release: openssh", title_prefix: OpenSSH, category: security, limit: 5, url: "https://github.com/openssh/openssh-portable/tags.atom"}
+  - {id: rel-spring-fw, type: rss, name: "Release: Spring Framework", title_prefix: Spring Framework, category: security, limit: 5, url: "https://github.com/spring-projects/spring-framework/releases.atom", exclude_regex: *prerelease}
+  - {id: rel-spring-boot, type: rss, name: "Release: Spring Boot", title_prefix: Spring Boot, category: security, limit: 5, url: "https://github.com/spring-projects/spring-boot/releases.atom", exclude_regex: *prerelease}
+  - {id: rel-log4j, type: rss, name: "Release: Log4j", title_prefix: Log4j, category: security, limit: 5, url: "https://github.com/apache/logging-log4j2/releases.atom", exclude_regex: *prerelease}
+  - {id: rel-tomcat, type: rss, name: "Release: Tomcat", title_prefix: Tomcat, category: security, limit: 5, url: "https://github.com/apache/tomcat/tags.atom", exclude_regex: *prerelease}
+  - {id: rel-node, type: rss, name: "Release: Node.js", title_prefix: Node.js, category: security, limit: 5, url: "https://github.com/nodejs/node/releases.atom", exclude_regex: *prerelease}
+  - {id: rel-python, type: rss, name: "Release: CPython", title_prefix: Python, category: security, limit: 5, url: "https://github.com/python/cpython/tags.atom", exclude_regex: *prerelease}
+  - {id: rel-django, type: rss, name: "Release: Django", title_prefix: Django, category: security, limit: 5, url: "https://github.com/django/django/tags.atom", exclude_regex: *prerelease}
+  - {id: rel-redis, type: rss, name: "Release: Redis", title_prefix: Redis, category: security, limit: 5, url: "https://github.com/redis/redis/releases.atom", exclude_regex: *prerelease}
+  - {id: rel-moby, type: rss, name: "Release: Docker Engine", title_prefix: Docker, category: security, limit: 5, url: "https://github.com/moby/moby/releases.atom", exclude_regex: *prerelease}
+  - {id: rel-linux, type: rss, name: "Release: Linux kernel", title_prefix: Linux, category: security, limit: 5, url: "https://github.com/torvalds/linux/tags.atom", exclude_regex: *prerelease}
+  # 아래 둘은 릴리스가 잦지만 Claude가 중요도로 거릅니다
   - {id: rel-fastapi, type: rss, name: "Release: FastAPI", title_prefix: FastAPI, category: security, limit: 5, url: "https://github.com/tiangolo/fastapi/releases.atom", exclude_regex: *prerelease}
   - {id: rel-pydantic, type: rss, name: "Release: Pydantic", title_prefix: Pydantic, category: security, limit: 5, url: "https://github.com/pydantic/pydantic/releases.atom", exclude_regex: *prerelease}
 
@@ -190,7 +189,7 @@ sources:
     name: Google DeepMind
     category: ai
     url: https://deepmind.google/blog/rss.xml
-  - id: simonw               # [확인] AI 외 글도 섞여서 관련도 판단에 맡김
+  - id: simonw               # [확인] AI 외 글도 섞여 있어 Claude가 거름
     type: rss
     name: Simon Willison
     category: ai
@@ -218,7 +217,7 @@ sources:
 
   # ══ AI: 탐색형 (에이전트 스킬 · MCP · 신모델 소식) ════
   # 소스를 일일이 지정하지 않고 검색으로 새 항목을 찾습니다.
-  # 별 개수·HN 점수 하한으로 스팸을 막고, Claude가 관련도와 [AI-스킬] 라벨을 판단합니다.
+  # 별 개수·HN 점수 하한으로 스팸을 막고, Claude가 중요도와 [AI-스킬] 라벨을 판단합니다.
   - id: gh-skills
     type: github_search
     category: ai
