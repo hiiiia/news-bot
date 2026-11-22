@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1794769127
+  "summary_warn_at": 1795331086
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -7255,6 +7255,7 @@
   "securityweek:https://www.securityweek.com/?p=50978": 1795206748,
   "securityweek:https://www.securityweek.com/?p=50980": 1795206748,
   "securityweek:https://www.securityweek.com/?p=50982": 1795289313,
+  "securityweek:https://www.securityweek.com/?p=50985": 1795331085,
   "simonw:https://simonwillison.net/2026/Nov/1/delete-uv-lock-first/": 1793600712,
   "simonw:https://simonwillison.net/2026/Nov/1/kyle-kingsbury/": 1793555954,
   "simonw:https://simonwillison.net/2026/Nov/10/llm-gemini/": 1794553073,
@@ -7563,6 +7564,7 @@
   "thn:https://thehackernews.com/2026/11/researcher-demonstrates-database-rce.html": 1795121341,
   "thn:https://thehackernews.com/2026/11/researchers-bypass-chatgpt-lockdown.html": 1793948396,
   "thn:https://thehackernews.com/2026/11/researchers-claim-two-rce-exploits-that.html": 1794949502,
+  "thn:https://thehackernews.com/2026/11/researchers-demonstrate-ghostscript.html": 1795331083,
   "thn:https://thehackernews.com/2026/11/researchers-detail-iphone-flaw-that-let.html": 1794949502,
   "thn:https://thehackernews.com/2026/11/researchers-uncover-prompt-adware.html": 1793822038,
   "thn:https://thehackernews.com/2026/11/retadup-worm-resurfaces-7-years-after.html": 1794867567,
