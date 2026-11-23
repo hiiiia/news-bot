@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1795377012
+  "summary_warn_at": 1795420410
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -136,6 +136,7 @@
   "bleeping:https://www.bleepingcomputer.com/news/security/chrome-extensions-with-134-million-installs-caught-hijacking-searches/": 1793314329,
   "bleeping:https://www.bleepingcomputer.com/news/security/cisa-confirms-php2shell-vulnerabilities-now-exploited-in-attacks/": 1793103998,
   "bleeping:https://www.bleepingcomputer.com/news/security/cisa-flags-cisco-broadworks-flaw-as-actively-exploited-in-attacks/": 1794426279,
+  "bleeping:https://www.bleepingcomputer.com/news/security/cisa-flags-critical-cisco-expressway-rce-flaw-as-actively-exploited/": 1795420409,
   "bleeping:https://www.bleepingcomputer.com/news/security/cisa-flags-wordpress-rce-flaw-as-actively-exploited-in-attacks/": 1793822051,
   "bleeping:https://www.bleepingcomputer.com/news/security/cisa-hackers-chain-plex-flaws-in-plex2shell-attacks-to-breach-servers/": 1792757018,
   "bleeping:https://www.bleepingcomputer.com/news/security/cisa-warns-of-fragnesia-linux-flaw-chained-in-php2shell-attacks/": 1793314370,
@@ -5541,6 +5542,10 @@
   "nvd:CVE-2026-134459": 1795289313,
   "nvd:CVE-2026-134461": 1795289313,
   "nvd:CVE-2026-134624": 1795377011,
+  "nvd:CVE-2026-134814": 1795420403,
+  "nvd:CVE-2026-134815": 1795420405,
+  "nvd:CVE-2026-134830": 1795420406,
+  "nvd:CVE-2026-134838": 1795420408,
   "nvd:CVE-2026-13594": 1793734685,
   "nvd:CVE-2026-13672": 1794468319,
   "nvd:CVE-2026-13764": 1794514038,
