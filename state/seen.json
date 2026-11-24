@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1795420410
+  "summary_warn_at": 1795478586
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -1813,6 +1813,7 @@
   "ghsa:GHSA-2mr3-rxrq-238c": 1795159787,
   "ghsa:GHSA-2pj4-v76f-wjvx": 1795159787,
   "ghsa:GHSA-2qm8-x737-gmw5": 1793426191,
+  "ghsa:GHSA-2r3w-c2vx-fv5g": 1795478582,
   "ghsa:GHSA-2v3c-qxhr-7vpv": 1793139938,
   "ghsa:GHSA-32p6-cwhc-8r78": 1795159787,
   "ghsa:GHSA-33r5-xmm8-v6x5": 1793734685,
@@ -3135,6 +3136,8 @@
   "kev:CVE-2026-124194": 1794340420,
   "kev:CVE-2026-125350": 1794340419,
   "kev:CVE-2026-129448": 1795206748,
+  "kev:CVE-2026-133968": 1795478579,
+  "kev:CVE-2026-134624": 1795478581,
   "kev:CVE-2026-19868": 1794032029,
   "kev:CVE-2026-20320": 1794340381,
   "kev:CVE-2026-21589": 1792757018,
@@ -5546,6 +5549,8 @@
   "nvd:CVE-2026-134815": 1795420405,
   "nvd:CVE-2026-134830": 1795420406,
   "nvd:CVE-2026-134838": 1795420408,
+  "nvd:CVE-2026-135161": 1795478584,
+  "nvd:CVE-2026-135163": 1795478585,
   "nvd:CVE-2026-13594": 1793734685,
   "nvd:CVE-2026-13672": 1794468319,
   "nvd:CVE-2026-13764": 1794514038,
