@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1795559758
+  "summary_warn_at": 1795596607
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -7279,6 +7279,7 @@
   "securityweek:https://www.securityweek.com/?p=50980": 1795206748,
   "securityweek:https://www.securityweek.com/?p=50982": 1795289313,
   "securityweek:https://www.securityweek.com/?p=50985": 1795331085,
+  "securityweek:https://www.securityweek.com/?p=51046": 1795596606,
   "simonw:https://simonwillison.net/2026/Nov/1/delete-uv-lock-first/": 1793600712,
   "simonw:https://simonwillison.net/2026/Nov/1/kyle-kingsbury/": 1793555954,
   "simonw:https://simonwillison.net/2026/Nov/10/llm-gemini/": 1794553073,
@@ -7532,9 +7533,11 @@
   "thn:https://thehackernews.com/2026/11/government-linux-servers-targeted-with.html": 1793656133,
   "thn:https://thehackernews.com/2026/11/hackers-compromise-etherspheres-bee-js.html": 1794263545,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-btcpay-server-flaw-to.html": 1793734685,
+  "thn:https://thehackernews.com/2026/11/hackers-exploit-critical-aspnet-anti.html": 1795596604,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-critical-cisco.html": 1795206761,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-critical-vmware-cisco.html": 1795289348,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-critical-xen-orchestra.html": 1794426279,
+  "thn:https://thehackernews.com/2026/11/hackers-exploit-n-able-mailassure-flaw.html": 1795596601,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-n-central-flaws-to.html": 1794553075,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-patched-apple-flaw-to.html": 1793862043,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-php2shell-flaws-in.html": 1794638664,
@@ -7620,11 +7623,13 @@
   "thn:https://thehackernews.com/2026/11/trezor-confirms-hidden-hardware.html": 1794638630,
   "thn:https://thehackernews.com/2026/11/trigram-campaign-impersonates-about-50.html": 1794949502,
   "thn:https://thehackernews.com/2026/11/us-agencies-warn-refrigeration.html": 1794263500,
+  "thn:https://thehackernews.com/2026/11/vmware-vcenter-hit-by-another-critical.html": 1795596600,
   "thn:https://thehackernews.com/2026/11/we-built-agent-that-broke-all-of-our.html": 1794426270,
   "thn:https://thehackernews.com/2026/11/web3auth-flaw-exploited-to-steal-keplr.html": 1794263500,
   "thn:https://thehackernews.com/2026/11/weekly-recap-critical-cves-linux-ddos.html": 1793656133,
   "thn:https://thehackernews.com/2026/11/weekly-recap-n-able-0-days-windows-0.html": 1794867567,
   "thn:https://thehackernews.com/2026/11/weekly-recap-sshole-exploited-apt-root.html": 1794263500,
+  "thn:https://thehackernews.com/2026/11/weekly-recap-vmware-0-day-java4shell.html": 1795596603,
   "thn:https://thehackernews.com/2026/11/whatsapp-patches-3-security-flaws.html": 1795206748,
   "thn:https://thehackernews.com/2026/11/when-ai-agent-goes-wrong-can-you-stop-it.html": 1794638630,
   "thn:https://thehackernews.com/2026/11/xen-hypervisor-flaws-let-one-malicious.html": 1793822051,
