@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1795682189
+  "summary_warn_at": 1795729410
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -1884,6 +1884,7 @@
   "ghsa:GHSA-72px-j8gh-p79x": 1794867567,
   "ghsa:GHSA-737x-cwfr-5vvc": 1792787060,
   "ghsa:GHSA-73v3-wf97-vpgj": 1794553029,
+  "ghsa:GHSA-743w-g9pf-8p94": 1795729404,
   "ghsa:GHSA-78g4-xqwv-q3g8": 1792757033,
   "ghsa:GHSA-7984-qgvg-3j9c": 1793426191,
   "ghsa:GHSA-7hvw-3c2q-45qg": 1795159787,
@@ -1894,6 +1895,7 @@
   "ghsa:GHSA-7vr2-2fgp-9w7p": 1793139938,
   "ghsa:GHSA-7w38-ggh5-v542": 1793734685,
   "ghsa:GHSA-7wch-p9px-956x": 1793426191,
+  "ghsa:GHSA-7wwv-x6mc-pxqx": 1795729403,
   "ghsa:GHSA-82w8-65qw-gch6": 1795073960,
   "ghsa:GHSA-833v-v58w-294h": 1795121341,
   "ghsa:GHSA-834v-8h66-3h79": 1792798170,
@@ -1946,6 +1948,7 @@
   "ghsa:GHSA-cg8m-r9f2-5wm2": 1792757018,
   "ghsa:GHSA-cggf-277g-3q54": 1793426191,
   "ghsa:GHSA-cjjx-gv54-83qh": 1794379521,
+  "ghsa:GHSA-crj3-q72p-ggqm": 1795729406,
   "ghsa:GHSA-cvx8-9ff6-54xq": 1795073960,
   "ghsa:GHSA-f2hq-32vh-53cc": 1792798174,
   "ghsa:GHSA-f3w6-w445-fwh9": 1794553070,
@@ -4661,6 +4664,8 @@
   "nvd:CVE-2026-12389": 1794295801,
   "nvd:CVE-2026-123890": 1795121380,
   "nvd:CVE-2026-123891": 1795121341,
+  "nvd:CVE-2026-123903": 1795729407,
+  "nvd:CVE-2026-123910": 1795729409,
   "nvd:CVE-2026-123957": 1794057421,
   "nvd:CVE-2026-123958": 1794057421,
   "nvd:CVE-2026-123959": 1794057421,
