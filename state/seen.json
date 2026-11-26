@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1795643420
+  "summary_warn_at": 1795682189
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -3144,6 +3144,11 @@
   "kev:CVE-2026-131914": 1795559752,
   "kev:CVE-2026-132165": 1795559753,
   "kev:CVE-2026-132224": 1795559750,
+  "kev:CVE-2026-133275": 1795682183,
+  "kev:CVE-2026-133303": 1795682186,
+  "kev:CVE-2026-133311": 1795682185,
+  "kev:CVE-2026-133323": 1795682188,
+  "kev:CVE-2026-133324": 1795682182,
   "kev:CVE-2026-133469": 1795643415,
   "kev:CVE-2026-133968": 1795478579,
   "kev:CVE-2026-134624": 1795478581,
