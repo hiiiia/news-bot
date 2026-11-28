@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1795852981
+  "summary_warn_at": 1795897140
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -288,6 +288,7 @@
   "bleeping:https://www.bleepingcomputer.com/news/security/ukraine-fbi-arrest-ransomware-gang-members-tied-to-40m-in-ransoms/": 1795073960,
   "bleeping:https://www.bleepingcomputer.com/news/security/university-of-copenhagen-data-breach-exposes-data-of-525-000-people/": 1793079614,
   "bleeping:https://www.bleepingcomputer.com/news/security/unm-health-ransomware-attack-disrupts-patient-care-surgeries/": 1793139938,
+  "bleeping:https://www.bleepingcomputer.com/news/security/unpatched-cacti-zero-day-with-public-poc-gives-remote-code-execution/": 1795897139,
   "bleeping:https://www.bleepingcomputer.com/news/security/us-bans-mexc-crypto-exchange-over-sanctions-evasion-cybercrime-links/": 1794263500,
   "bleeping:https://www.bleepingcomputer.com/news/security/us-charges-two-canadians-accused-of-hacking-us-universities/": 1793822038,
   "bleeping:https://www.bleepingcomputer.com/news/security/us-disrupts-north-korean-campaign-behind-400-million-crypto-theft/": 1794680263,
@@ -7487,6 +7488,7 @@
   "thn:https://thehackernews.com/2026/10/wordpress-rce-flaw-draws-nearly-63000.html": 1793399424,
   "thn:https://thehackernews.com/2026/11/10-year-old-nginx-http2-flaw-lets.html": 1795073996,
   "thn:https://thehackernews.com/2026/11/186-fake-ai-domains-redirect-users-to.html": 1794514038,
+  "thn:https://thehackernews.com/2026/11/1password-hacked-customer-data-and.html": 1795897133,
   "thn:https://thehackernews.com/2026/11/4837-hijacked-github-accounts-ran-ci.html": 1794514080,
   "thn:https://thehackernews.com/2026/11/5-active-cyber-threats-that-put-us.html": 1793909201,
   "thn:https://thehackernews.com/2026/11/a-single-malicious-webpage-let.html": 1795289313,
@@ -7540,6 +7542,7 @@
   "thn:https://thehackernews.com/2026/11/darkblinders-compromises-israeli-target.html": 1793656133,
   "thn:https://thehackernews.com/2026/11/debian-and-ubuntu-apt-flaw-lets-mitm.html": 1793822086,
   "thn:https://thehackernews.com/2026/11/default-adminadmin-server-password.html": 1794263500,
+  "thn:https://thehackernews.com/2026/11/drupal-fail2install-exploit-details.html": 1795897136,
   "thn:https://thehackernews.com/2026/11/drupal-patches-critical-installer-flaw.html": 1795159796,
   "thn:https://thehackernews.com/2026/11/eggstreme-hackers-rebuild-malware-with.html": 1795073960,
   "thn:https://thehackernews.com/2026/11/emudhra-revokes-8-more-cas-it.html": 1794426270,
@@ -7571,6 +7574,8 @@
   "thn:https://thehackernews.com/2026/11/hackers-exploit-patched-apple-flaw-to.html": 1793862043,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-php2shell-flaws-in.html": 1794638664,
   "thn:https://thehackernews.com/2026/11/hackers-exploit-quboles-trusted-aws.html": 1794263509,
+  "thn:https://thehackernews.com/2026/11/hackers-exploit-two-geoserver-flaws-as.html": 1795897135,
+  "thn:https://thehackernews.com/2026/11/hackers-exploited-cvss-100-hexpm-rce.html": 1795897138,
   "thn:https://thehackernews.com/2026/11/hackers-exploited-openssh-sshole-flaw.html": 1793993604,
   "thn:https://thehackernews.com/2026/11/hackers-exploiting-critical-puppet-rce.html": 1795034586,
   "thn:https://thehackernews.com/2026/11/hackers-found-way-around-github-sha.html": 1794949502,
