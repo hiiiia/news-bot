@@ -50,7 +50,7 @@
   "toss-tech"
  ],
  "meta": {
-  "summary_warn_at": 1795814845
+  "summary_warn_at": 1795852981
  },
  "ids": {
   "bleeping:https://www.bleepingcomputer.com/news/apple/apple-backports-coregraphics-zero-day-patches-to-older-iphones/": 1793103983,
@@ -5589,6 +5589,10 @@
   "nvd:CVE-2026-13672": 1794468319,
   "nvd:CVE-2026-13764": 1794514038,
   "nvd:CVE-2026-137706": 1795769283,
+  "nvd:CVE-2026-138003": 1795852975,
+  "nvd:CVE-2026-138004": 1795852976,
+  "nvd:CVE-2026-138034": 1795852973,
+  "nvd:CVE-2026-138154": 1795852978,
   "nvd:CVE-2026-14467": 1793365889,
   "nvd:CVE-2026-14492": 1795121341,
   "nvd:CVE-2026-14571": 1793193137,
@@ -7647,6 +7651,7 @@
   "thn:https://thehackernews.com/2026/11/three-china-nexus-espionage-campaigns.html": 1794426270,
   "thn:https://thehackernews.com/2026/11/trezor-confirms-hidden-hardware.html": 1794638630,
   "thn:https://thehackernews.com/2026/11/trigram-campaign-impersonates-about-50.html": 1794949502,
+  "thn:https://thehackernews.com/2026/11/unpatched-cacti-zero-day-enables-rce-in.html": 1795852980,
   "thn:https://thehackernews.com/2026/11/us-agencies-warn-refrigeration.html": 1794263500,
   "thn:https://thehackernews.com/2026/11/vmware-vcenter-hit-by-another-critical.html": 1795596600,
   "thn:https://thehackernews.com/2026/11/we-built-agent-that-broke-all-of-our.html": 1794426270,
